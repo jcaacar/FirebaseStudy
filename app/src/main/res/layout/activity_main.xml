@@ -18,8 +18,15 @@
             android:id="@+id/btn_start_service"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="Start Service" />
+
+        <Button
+            android:id="@+id/btn_stop_service"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:enabled="false"
             android:layout_marginBottom="20dp"
-            android:text="Start Sync" />
+            android:text="Stop Service" />
 
         <Button
             android:id="@+id/btn_sync_start"

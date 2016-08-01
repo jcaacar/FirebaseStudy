@@ -6,7 +6,7 @@
 
     <string name="notification_service_sync_title">Serviço iniciado</string>
 
-    <string name="notification_service_sync_started">Sincronizando...</string>
+    <string name="notification_service_sync_started">Sincronização iniciada!</string>
     <string name="notification_service_sync_completed">Sincronização completa!</string>
     <string name="notification_service_sync_stopped">Sincronização parada!</string>
     <string name="notification_service_sync_cancelled">Sincronização cancelada!</string>

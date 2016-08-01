@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -28,8 +29,10 @@ import permissions.dispatcher.RuntimePermissions;
 public class MainActivity extends AppCompatActivity { //implements FirebaseStorageManager.OnCompleteDownload
 
     //region Attributes
+    private final String TAG = MainActivity.class.getSimpleName();
 
     private Button btnStartService;
+    private Button btnStopService;
 
     private Button btnStartSync;
     private Button btnStopSync;
@@ -63,17 +66,74 @@ public class MainActivity extends AppCompatActivity { //implements FirebaseStora
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        initViews();
+        configureViewsListener();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (Util.isServiceRunning(this, SyncService.class)) {
+            Log.d(TAG, "service is running");
+            if (!isBounded) {
+                bindService(new Intent(this, SyncService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+            }
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unbindSyncService();
+    }
+
+    //endregion
+
+    //region Permissions
+
+    @NeedsPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    public void startSyncServicePermission() {
+        startSyncService();
+    }
+
+    @OnPermissionDenied(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    public void showDeniedForExternalStorage() {
+        Toast.makeText(this, R.string.permissionDenied, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        MainActivityPermissionsDispatcher.onRequestPermissionsResult(this, requestCode, grantResults);
+    }
+
+    //endregion
+
+    //region UI
+
+    private void initViews() {
         btnStartService = (Button) findViewById(R.id.btn_start_service);
+        btnStopService = (Button) findViewById(R.id.btn_stop_service);
 
         btnStartSync = (Button) findViewById(R.id.btn_sync_start);
         btnStopSync = (Button) findViewById(R.id.btn_sync_stop);
         btnCancelSync = (Button) findViewById(R.id.btn_sync_cancel);
         btnStateSync = (Button) findViewById(R.id.btn_sync_state);
+    }
 
+    private void configureViewsListener() {
         btnStartService.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 MainActivityPermissionsDispatcher.startSyncServicePermissionWithCheck(MainActivity.this);
+            }
+        });
+
+        btnStopService.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stopSyncService();
             }
         });
 
@@ -108,54 +168,11 @@ public class MainActivity extends AppCompatActivity { //implements FirebaseStora
         });
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        if (Util.isServiceRunning(this, SyncService.class)) {
-            if (!isBounded) {
-                bindService(new Intent(this, SyncService.class), serviceConnection, Context.BIND_AUTO_CREATE);
-            }
-        }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (isBounded) {
-            unbindService(serviceConnection);
-            isBounded = false;
-        }
-    }
-
-    //endregion
-
-    //region Permissions
-
-    @NeedsPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-    public void startSyncServicePermission() {
-        startSyncService();
-    }
-
-    @OnPermissionDenied(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-    public void showDeniedForExternalStorage() {
-        Toast.makeText(this, R.string.permissionDenied, Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        MainActivityPermissionsDispatcher.onRequestPermissionsResult(this, requestCode, grantResults);
-    }
-
-    //endregion
-
-    //region Core
-
     private void configureLayoutByState(SyncService.State syncServiceState) {
 
         switch (syncServiceState) {
             case STOPPED:
+                btnStopService.setEnabled(true);
                 btnStartSync.setEnabled(true);
                 btnStateSync.setEnabled(true);
 
@@ -163,8 +180,9 @@ public class MainActivity extends AppCompatActivity { //implements FirebaseStora
                 btnStopSync.setEnabled(false);
                 btnCancelSync.setEnabled(false);
                 break;
-            case DOWNLOADING:
+            case STARTED:
 
+                btnStopService.setEnabled(true);
                 btnStopSync.setEnabled(true);
                 btnCancelSync.setEnabled(true);
                 btnStateSync.setEnabled(true);
@@ -174,6 +192,7 @@ public class MainActivity extends AppCompatActivity { //implements FirebaseStora
                 break;
             case COMPLETED:
 
+                btnStopService.setEnabled(true);
                 btnStateSync.setEnabled(true);
 
                 btnStartService.setEnabled(false);
@@ -183,6 +202,7 @@ public class MainActivity extends AppCompatActivity { //implements FirebaseStora
                 break;
             case CANCELLED:
 
+                btnStopService.setEnabled(true);
                 btnStateSync.setEnabled(true);
 
                 btnStartService.setEnabled(false);
@@ -196,6 +216,30 @@ public class MainActivity extends AppCompatActivity { //implements FirebaseStora
         }
     }
 
+    //endregion
+
+    //region Core
+
+    private void stopSyncService() {
+        unbindSyncService();
+        stopService(new Intent(MainActivity.this, SyncService.class));
+
+        btnStartService.setEnabled(true);
+
+        btnStopService.setEnabled(false);
+        btnStartSync.setEnabled(false);
+        btnStopSync.setEnabled(false);
+        btnCancelSync.setEnabled(false);
+        btnStateSync.setEnabled(false);
+    }
+
+    private void unbindSyncService() {
+        if(isBounded) {
+            unbindService(serviceConnection);
+            isBounded = false;
+        }
+    }
+
     private void startSyncService() {
         if (!Util.isServiceRunning(this, SyncService.class)) {
             startService(new Intent(this, SyncService.class));
@@ -203,15 +247,12 @@ public class MainActivity extends AppCompatActivity { //implements FirebaseStora
         if (!isBounded) {
             bindService(new Intent(this, SyncService.class), serviceConnection, Context.BIND_AUTO_CREATE);
         }
-
-        btnStartSync.setEnabled(true);
-        btnStateSync.setEnabled(true);
     }
 
     private void startSync() {
         try {
             service.startSync();
-            configureLayoutByState(SyncService.State.DOWNLOADING);
+            configureLayoutByState(SyncService.State.STARTED);
         } catch (InvalidSyncServiceStateException ex) {
             Toast.makeText(this, ex.getMessage(), Toast.LENGTH_SHORT).show();
         }

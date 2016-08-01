@@ -17,7 +17,7 @@ public class SyncService extends Service implements SyncServiceAPI {
 
     public enum State {
         STOPPED(0),
-        DOWNLOADING(1),
+        STARTED(1),
         COMPLETED(2),
         CANCELLED(3),
         ERROR(4);
@@ -85,7 +85,7 @@ public class SyncService extends Service implements SyncServiceAPI {
 
     @Override
     public void startSync() throws InvalidSyncServiceStateException {
-        changeTo(State.DOWNLOADING);
+        changeTo(State.STARTED);
     }
 
     @Override
@@ -109,27 +109,27 @@ public class SyncService extends Service implements SyncServiceAPI {
 
     private synchronized void changeTo(State toState) throws InvalidSyncServiceStateException {
 
-        if (toState == State.DOWNLOADING && currentState == State.STOPPED) {
+        if (toState == State.STARTED && currentState == State.STOPPED) {
 
             showNotification(R.string.notification_service_sync_started);
             currentState = toState;
 
-        } else if (toState == State.COMPLETED && currentState == State.DOWNLOADING) {
+        } else if (toState == State.COMPLETED && currentState == State.STARTED) {
 
             showNotification(R.string.notification_service_sync_completed);
             currentState = toState;
 
-        } else if (toState == State.STOPPED && currentState == State.DOWNLOADING) {
+        } else if (toState == State.STOPPED && currentState == State.STARTED) {
 
             showNotification(R.string.notification_service_sync_stopped);
             currentState = toState;
 
-        } else if (toState == State.CANCELLED && currentState == State.DOWNLOADING) {
+        } else if (toState == State.CANCELLED && currentState == State.STARTED) {
 
             showNotification(R.string.notification_service_sync_cancelled);
             currentState = toState;
 
-        } else if (toState == State.ERROR && currentState == State.DOWNLOADING) {
+        } else if (toState == State.ERROR && currentState == State.STARTED) {
 
             showNotification(R.string.notification_service_sync_error);
             currentState = toState;
