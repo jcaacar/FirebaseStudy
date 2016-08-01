@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">FirebaseStudy</string>
+
+    <string name="permissionAllowed">Permissão Concedida!</string>
+    <string name="permissionDenied">Permissão Negada!</string>
+
+    <string name="notification_service_sync_title">Serviço iniciado</string>
+
+    <string name="notification_service_sync_started">Sincronizando...</string>
+    <string name="notification_service_sync_completed">Sincronização completa!</string>
+    <string name="notification_service_sync_stopped">Sincronização parada!</string>
+    <string name="notification_service_sync_cancelled">Sincronização cancelada!</string>
+    <string name="notification_service_sync_error">Sincronização com erro!</string>
+
+</resources>
